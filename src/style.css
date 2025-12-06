@@ -1,0 +1,46 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background-color: #1a1a1a; /* Ciemne tło */
+  color: rgba(255, 255, 255, 0.87);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Ukrywamy paski przewijania przeglądarki */
+  width: 100vw;
+  height: 100vh;
+  cursor: grab; /* Kursor łapki */
+}
+
+body:active {
+  cursor: grabbing; /* Kursor zaciśniętej łapki jak klikniesz */
+}
+
+#game-world {
+  width: 5000px;
+  height: 5000px;
+  position: relative;
+  /* SZTUCZKA: Rysowanie siatki samym CSS-em */
+  background-image:
+    linear-gradient(to right, #333 1px, transparent 1px),
+    linear-gradient(to bottom, #333 1px, transparent 1px);
+  background-size: 50px 50px; /* Kratka co 50px */
+  background-color: #111;
+  
+  /* Centrowanie startowe (opcjonalne, ustawimy JS-em) */
+  transform: translate(0, 0); 
+}
+
+#cursor {
+  position: absolute;
+  width: 50px;     /* Tyle co kratka tła */
+  height: 50px;
+  border: 2px solid #ffd700; /* Złoty kolor */
+  box-shadow: 0 0 10px #ffd700; /* Neonowa poświata */
+  pointer-events: none; /* WAŻNE: Żeby myszka klikała "przez" niego, a nie w niego */
+  display: none; /* Ukryty, dopóki nie ruszymy myszką */
+  z-index: 10;
+}
