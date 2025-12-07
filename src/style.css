@@ -44,3 +44,14 @@ body:active {
   display: none; /* Ukryty, dopóki nie ruszymy myszką */
   z-index: 10;
 }
+
+/* --- DODAJ TO: Domyślne ukrycie panelu edytora --- */
+#editor-panel {
+    display: none; /* Domyślnie jest UKRYTY */
+}
+
+/* DODAJ TO: Klasa do WŁĄCZANIA widoczności */
+.editor-active {
+    /* Użyj !important, aby mieć pewność, że nadpisze inline style z HTML */
+    display: flex !important; 
+}

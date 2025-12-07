@@ -35,7 +35,17 @@
     <script type="module" src="/src/main.js"></script>
 
     <button id="btn-logout" style="display: none; position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #d93025; color: white; border: 1px solid white; cursor: pointer; z-index: 10000; font-family: sans-serif; font-weight: bold;">
-  WYLOGUJ
-</button>
+    WYLOGUJ
+    </button>
+
+
+
+<div id="editor-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #333; color: white; padding: 20px; border: 2px solid white; z-index: 9998; flex-direction: column; gap: 10px;">
+    <h3>Edycja Działki: <span id="plot-coords"></span></h3>
+    <p>Tylko właściciel może modyfikować. </p>
+    <input type="file" id="upload-input" accept="image/*">
+    <button id="upload-button">Prześlij zdjęcie</button>
+    <button id="close-editor-btn">Zamknij</button>
+</div>
   </body>
 </html>
