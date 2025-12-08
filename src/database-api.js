@@ -53,6 +53,61 @@ export async function wczytajDzialki() {
     }
 }
 
+// --- NOWA FUNKCJA: Rysowanie "Ducha" ---
+// To jest czysta manipulacja DOM. Tworzymy div, nadajemy style i wrzucamy na mapę.
+function rysujDucha(x, y) {
+    // Sprawdzamy, czy duch już tu nie stoi (żeby nie dublować przy odświeżaniu)
+    const selector = `.ghost-plot[data-x="${x}"][data-y="${y}"]`;
+    if (document.querySelector(selector)) return;
+
+    const ghost = document.createElement('div');
+    ghost.classList.add('ghost-plot'); // Klasa dla łatwiejszego stylowania/usuwania
+    ghost.style.position = 'absolute';
+    ghost.style.left = x + 'px';
+    ghost.style.top = y + 'px';
+    ghost.style.width = '50px';
+    ghost.style.height = '50px';
+    ghost.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; // Przezroczyste tło
+    ghost.style.border = '2px dashed #ffff00'; // Żółta przerywana linia (🚧)
+    ghost.style.pointerEvents = 'none'; // Żeby myszka klikała "przez" niego w podłogę
+    
+    // Zapisujemy koordynaty w HTML, żeby łatwo je znaleźć
+    ghost.dataset.x = x;
+    ghost.dataset.y = y;
+    
+    // Dodajemy ikonkę (opcjonalne)
+    ghost.innerText = "⏳";
+    ghost.style.display = "flex";
+    ghost.style.alignItems = "center";
+    ghost.style.justifyContent = "center";
+
+    world.appendChild(ghost);
+}
+
+// --- NOWA FUNKCJA: Pobieranie moich zgłoszeń ---
+export async function wczytajMojeRequesty() {
+    // Jak nie jesteś zalogowany, to nie ma czego szukać
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+        .from('plots_request') // Pamiętaj: małe litery nazwy tabeli
+        .select('x, y') // Pobieramy tylko X i Y, reszta nas nie obchodzi do rysowania
+        .eq('user_id', currentUser.user.id); // Tylko MOJE
+
+    if (error) {
+        console.error("Błąd wczytywania requestów:", error);
+        return;
+    }
+
+    if (data) {
+        console.log(`Przywracam ${data.length} oczekujących próśb.`);
+        // Dla każdego wyniku z bazy -> rysujemy ducha
+        data.forEach(req => {
+            rysujDucha(req.x, req.y);
+        });
+    }
+}
+
 /** * Centralna funkcja obsługująca kliknięcie na działkę.
  * Wywoływana z main.js
  */
@@ -70,7 +125,7 @@ export async function handlePlotClick(gx, gy) {
         .select('*')
         .eq('x', gx)
         .eq('y', gy)
-        .single(); 
+        .maybeSingle(); 
 
     if (selectError && selectError.code !== 'PGRST116') {
         console.error('Błąd zapytania SELECT:', selectError);
@@ -98,9 +153,52 @@ export async function handlePlotClick(gx, gy) {
                 console.log('Sukces zajęcia działki!');
             }
         } else {
-            console.warn('Tylko Admin może zająć wolną działkę!');
-            alert('Tylko Admin może stawiać nowe klocki!');
+            
+            // --- LOGIKA WOLNEJ DZIAŁKI (Tworzenie prośby) ---
+
+    // 3. Sprawdzamy LIMIT (Max 4 prośby na gracza)
+    const { count, error: countError } = await supabase
+        .from('plots_request')
+        .select('*', { count: 'exact', head: true }) // head: true = nie pobieraj danych, tylko policz
+        .eq('user_id', currentUser.user.id);
+
+    if (count >= 4) {
+        alert("Masz już 4 aktywne prośby! Poczekaj na Admina.");
+        return;
+    }
+
+    // 4. Przygotowanie danych (Wyciągamy NICK z metadanych)
+    // Jak nicku nie ma (stare konto), dajemy fallback "Gracz"
+    const myNick = currentUser.user.user_metadata?.username || 'Gracz';
+
+    // 5. WYSYŁKA DO BAZY
+    const { error: insertError } = await supabase
+        .from('plots_request')
+        .insert([
+            { 
+                x: gx, 
+                y: gy, 
+                user_id: currentUser.user.id,
+                username: myNick 
+            }
+        ]);
+
+    // 6. Obsługa wyników
+    if (insertError) {
+        // Kod 23505 to błąd unikalności (Unique Constraint) w Postgresie
+        if (insertError.code === '23505') {
+            alert("Już zgłosiłeś chęć na tę działkę!");
+        } else {
+            console.error("Błąd zapisu:", insertError);
+            alert("Błąd systemu.");
         }
+    } else {
+        // SUKCES!
+        console.log("Request wysłany!");
+        rysujDucha(gx, gy); // Natychmiastowy feedback wizualny
+    }
+
+    }
     } else {
         // 2. DZIAŁKA JEST ZAJĘTA
         console.log(`Działka zajęta przez: ${existingPlot.owner_id}.`);
@@ -120,5 +218,7 @@ export async function handlePlotClick(gx, gy) {
             }
         }
     }
+
+
 }
 

@@ -4,7 +4,7 @@ import './style.css';
 import { currentUser } from './supabase-client.js'; 
 import { setupAuth } from './auth.js';
 import { setupMapInteractions, isDragging } from './map.js';
-import { wczytajDzialki, handlePlotClick } from './database-api.js';
+import { wczytajDzialki, handlePlotClick, wczytajMojeRequesty } from './database-api.js';
 import { setupRealtimeChannel } from './realtime.js';
 import { setupEditor } from './editor-ui.js';
 
@@ -18,6 +18,10 @@ setupMapInteractions();
 
 // 3. Wczytanie początkowych danych
 wczytajDzialki();
+
+setTimeout(() => {
+   wczytajMojeRequesty();
+}, 1000);
 
 // 4. Uruchomienie nasłuchu Realtime
 setupRealtimeChannel();

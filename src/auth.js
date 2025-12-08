@@ -6,21 +6,49 @@ import { supabase, setCurrentUser } from './supabase-client.js';
 const loginScreen = document.getElementById('login-screen');
 const emailInput = document.getElementById('email');
 const passInput = document.getElementById('password');
+const usernameInput = document.getElementById('username');
 const loginBtn = document.getElementById('btn-login');
 const signupBtn = document.getElementById('btn-signup');
 const msgDisplay = document.getElementById('login-msg');
 const logoutBtn = document.getElementById('btn-logout');
+
 
 export function setupAuth() {
     // Funkcja rejestracji
     signupBtn.addEventListener('click', async () => {
         const email = emailInput.value;
         const password = passInput.value;
-        const { error } = await supabase.auth.signUp({ email, password });
+        const username = usernameInput.value;
 
-        if (error) msgDisplay.innerText = "Błąd: " + error.message;
-        else msgDisplay.innerText = "Konto założone! Możesz się zalogować.";
-    });
+        const { error } = await supabase.auth.signUp({
+             email, 
+             password,
+             options: {
+                data: {
+                    username: username
+                }
+             } 
+            });
+
+        if (!username || username.length < 3) {
+            msgDisplay.innerText = "Podaj nick (min. 3 znaki)!";
+            msgDisplay.style.color = "red";
+        return;}
+        
+        if (error) {
+            msgDisplay.innerText = "Błąd: " + error.message;
+            msgDisplay.style.color = "red";
+        }
+        else {
+            msgDisplay.innerText = "Konto założone! Możesz się zalogować.";
+            msgDisplay.style.color = "lime";
+        }
+
+        // Czyścimy formularz
+        emailInput.value = '';
+        passInput.value = '';
+        usernameInput.value = '';
+        });
 
     // Funkcja logowania
     loginBtn.addEventListener('click', async () => {
