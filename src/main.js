@@ -7,6 +7,7 @@ import { setupMapInteractions, isDragging } from './map.js';
 import { wczytajDzialki, handlePlotClick, wczytajMojeRequesty } from './database-api.js';
 import { setupRealtimeChannel } from './realtime.js';
 import { setupEditor } from './editor-ui.js';
+import { setupAdminPanel } from './admin-ui.js';
 
 // --- INICJALIZACJA ---
 
@@ -67,4 +68,12 @@ document.addEventListener('click', async (e) => {
 
 window.addEventListener('DOMContentLoaded', () => {
     setupEditor();
+});
+
+
+// Próba odpalenia panelu admina (jeśli user jest zalogowany i jest adminem)
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        setupAdminPanel();
+    }, 1000); // Małe opóźnienie, żeby auth zdążył wczytać usera
 });
