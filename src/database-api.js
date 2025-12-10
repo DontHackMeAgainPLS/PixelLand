@@ -41,13 +41,37 @@ export async function wczytajDzialki() {
         data.forEach(dzialka => {
             const plot = document.createElement('div');
             plot.style.position = 'absolute';
+
+            plot.classList.add('plot');
+
             plot.style.left = dzialka.x + 'px';
             plot.style.top = dzialka.y + 'px';
             plot.style.width = '50px';
             plot.style.height = '50px';
-            plot.style.backgroundColor = dzialka.color;
+            //Góra G
+
+
+            if (dzialka.image_url) {
+                // Jeśli jest zdjęcie:
+                const img = document.createElement('img');
+                img.src = dzialka.image_url;
+                // img.draggable = false; // Dobra praktyka: żeby nie przeciągać obrazka myszką
+                plot.appendChild(img);
+                
+                // Opcjonalnie: kolor tła jako backup, gdyby zdjęcie się nie załadowało
+                plot.style.backgroundColor = dzialka.color || '#333';
+            } else {
+                // Stare zachowanie - tylko kolor
+                plot.style.backgroundColor = dzialka.color;
+            }
+            
+            //G na dole
             plot.style.border = '2px solid #fff'; 
             plot.dataset.owner = dzialka.owner_id;
+
+            //TU ODŚWIEŻANIE
+            plot.dataset.id = dzialka.id;
+
             world.appendChild(plot);
         });
     }
