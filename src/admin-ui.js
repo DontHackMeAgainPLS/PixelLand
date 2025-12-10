@@ -67,7 +67,7 @@ function stworzElementListy(req) {
 
     item.innerHTML = `
         <div style="font-weight: bold; color: #ffd700;">${req.username || 'Nieznany'}</div>
-        <div style="font-size: 0.9em; color: #ccc;">Kratka: (${req.x}, ${req.y})</div>
+        <div style="font-size: 0.9em; color: #ccc;">Kratka: (${req.x/50}, ${req.y/50})</div>
         <div style="margin-top: 5px; display: flex; gap: 5px;">
             <button class="btn-accept" style="background: green; color: white; border: none; padding: 5px 10px; cursor: pointer;">✔</button>
             <button class="btn-reject" style="background: red; color: white; border: none; padding: 5px 10px; cursor: pointer;">✘</button>
