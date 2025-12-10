@@ -1,6 +1,9 @@
 // src/admin-ui.js
+
 import { supabase } from './supabase-client.js';
 import { checkIsAdmin } from './database-api.js';
+// 1. IMPORTUJEMY WORLD, ŻEBY MÓC RYSOWAĆ RĘCZNIE
+import { world } from './map.js';
 
 const adminPanel = document.getElementById('admin-panel');
 const listContainer = document.getElementById('requests-list');
@@ -52,6 +55,11 @@ function stworzElementListy(req) {
 
     const item = document.createElement('div');
     item.id = `req-${req.id}`;
+    
+    // ZAPISUJEMY DANE X i Y W UKRYTYM MIEJSCU, ŻEBY ŁATWO JE POBRAĆ PRZY USUWANIU
+    item.dataset.x = req.x;
+    item.dataset.y = req.y;
+
     item.style.background = '#333';
     item.style.padding = '10px';
     item.style.borderRadius = '5px';
@@ -96,14 +104,34 @@ async function zatwierdzRequest(req) {
         return;
     }
 
-    // B. Jeśli się udało -> Usuwamy z listy oczekujących
+    // --- 2. POPRAWKA: RĘCZNE RYSOWANIE DZIAŁKI (NATYCHMIASTOWE) ---
+    // Dzięki temu nie musisz odświeżać strony, żeby zobaczyć zmianę
+    const plot = document.createElement('div');
+    plot.style.position = 'absolute';
+    plot.style.left = req.x + 'px';
+    plot.style.top = req.y + 'px';
+    plot.style.width = '50px';
+    plot.style.height = '50px';
+    plot.dataset.owner = req.user_id;
+    
+    // Dodajemy do świata gry
+    world.appendChild(plot);
+    // -------------------------------------------------------------
+
+    // B. Jeśli się udało -> Usuwamy z listy oczekujących i usuwamy ducha
     await odrzucRequest(req.id, false); // false = bez pytania confirm
-    alert("Zatwierdzono!");
+    
+    // Opcjonalnie: alert("Zatwierdzono!");
 }
 
 // --- 5. AKCJA: ODRZUĆ (Delete z Request) ---
 async function odrzucRequest(id, ask = true) {
     if (ask && !confirm("Na pewno odrzucić?")) return;
+
+    // Pobieramy element listy, żeby znać współrzędne ducha (zapisane w dataset w kroku 3)
+    const listElement = document.getElementById(`req-${id}`);
+    const ghostX = listElement ? listElement.dataset.x : null;
+    const ghostY = listElement ? listElement.dataset.y : null;
 
     const { error } = await supabase
         .from('plots_request')
@@ -113,11 +141,19 @@ async function odrzucRequest(id, ask = true) {
     if (error) {
         console.error("Błąd usuwania:", error);
     } else {
-        // Usuń z widoku HTML
-        const el = document.getElementById(`req-${id}`);
-        if (el) el.remove();
+        // A. Usuń z listy (UI Admina)
+        if (listElement) listElement.remove();
+
+        // B. Usuń DUCHA z mapy (UI Mapy) --- 3. POPRAWKA ---
+        if (ghostX && ghostY) {
+            // Szukamy ducha o tych współrzędnych
+            const ghost = document.querySelector(`.ghost-plot[data-x="${ghostX}"][data-y="${ghostY}"]`);
+            if (ghost) {
+                ghost.remove();
+            }
+        }
     }
-}
+} // <--- TUTAJ BYŁ BRAKUJĄCY NAWIAS
 
 // --- 6. REALTIME DLA ADMINA ---
 function setupAdminRealtime() {

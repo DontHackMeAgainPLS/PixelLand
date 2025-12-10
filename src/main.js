@@ -4,7 +4,7 @@ import './style.css';
 import { currentUser } from './supabase-client.js'; 
 import { setupAuth } from './auth.js';
 import { setupMapInteractions, isDragging } from './map.js';
-import { wczytajDzialki, handlePlotClick, wczytajMojeRequesty } from './database-api.js';
+import { wczytajDzialki, handlePlotClick, wczytajMojeRequesty, setupGhostRealtime } from './database-api.js';
 import { setupRealtimeChannel } from './realtime.js';
 import { setupEditor } from './editor-ui.js';
 import { setupAdminPanel } from './admin-ui.js';

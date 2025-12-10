@@ -113,5 +113,5 @@ export function setupMapInteractions() {
 
     camera.zoom = newZoom;
     updateView();
-});
+}, {passive: false});
 }
