@@ -106,6 +106,7 @@ async function zatwierdzRequest(req) {
 
     // --- 2. POPRAWKA: RĘCZNE RYSOWANIE DZIAŁKI (NATYCHMIASTOWE) ---
     // Dzięki temu nie musisz odświeżać strony, żeby zobaczyć zmianę
+    /*
     const plot = document.createElement('div');
     plot.style.position = 'absolute';
     plot.style.left = req.x + 'px';
@@ -117,7 +118,7 @@ async function zatwierdzRequest(req) {
     // Dodajemy do świata gry
     world.appendChild(plot);
     // -------------------------------------------------------------
-
+    */
     // B. Jeśli się udało -> Usuwamy z listy oczekujących i usuwamy ducha
     await odrzucRequest(req.id, false); // false = bez pytania confirm
     
