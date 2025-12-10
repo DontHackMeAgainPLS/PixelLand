@@ -141,3 +141,7 @@ function setupAdminRealtime() {
     )
     .subscribe();
 }
+
+adminPanel.addEventListener('click', (e) => {
+    e.stopPropagation();   // blokuje kliknięcia „przechodzące” dalej
+});

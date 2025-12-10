@@ -8,6 +8,9 @@ import { wczytajDzialki, handlePlotClick, wczytajMojeRequesty } from './database
 import { setupRealtimeChannel } from './realtime.js';
 import { setupEditor } from './editor-ui.js';
 import { setupAdminPanel } from './admin-ui.js';
+import { supabase } from './supabase-client.js';
+
+const adminPanel = document.getElementById('admin-panel');
 
 // --- INICJALIZACJA ---
 
@@ -20,9 +23,6 @@ setupMapInteractions();
 // 3. Wczytanie początkowych danych
 wczytajDzialki();
 
-setTimeout(() => {
-   wczytajMojeRequesty();
-}, 1000);
 
 // 4. Uruchomienie nasłuchu Realtime
 setupRealtimeChannel();
@@ -72,8 +72,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 // Próba odpalenia panelu admina (jeśli user jest zalogowany i jest adminem)
-window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
+
+
+
+
+supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
         setupAdminPanel();
-    }, 1000); // Małe opóźnienie, żeby auth zdążył wczytać usera
+        wczytajMojeRequesty();      
+        setupGhostRealtime();
+    }
+
+    if (event === 'SIGNED_OUT') {
+        const adminPanel = document.getElementById('admin-panel');
+        if (adminPanel) {
+            adminPanel.style.display = 'none';
+            document.querySelectorAll('.ghost-plot').forEach(el => el.remove());
+        }
+    }
 });

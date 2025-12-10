@@ -89,10 +89,23 @@ export async function wczytajMojeRequesty() {
     // Jak nie jesteś zalogowany, to nie ma czego szukać
     if (!currentUser) return;
 
-    const { data, error } = await supabase
-        .from('plots_request') // Pamiętaj: małe litery nazwy tabeli
-        .select('x, y') // Pobieramy tylko X i Y, reszta nas nie obchodzi do rysowania
-        .eq('user_id', currentUser.user.id); // Tylko MOJE
+    const isAdmin = await checkIsAdmin();
+
+    let query = supabase
+        .from('plots_request')
+        .select('x, y');
+
+    if (!isAdmin) {
+        query = query.eq('user_id', currentUser.user.id);
+    }
+
+    const {data, error} = await query;
+    //const { data, error } = await supabase
+    //    .from('plots_request') // Pamiętaj: małe litery nazwy tabeli
+    //    .select('x, y') // Pobieramy tylko X i Y, reszta nas nie obchodzi do rysowania
+    //    .eq('user_id', currentUser.user.id); // Tylko MOJE
+
+
 
     if (error) {
         console.error("Błąd wczytywania requestów:", error);
@@ -222,3 +235,27 @@ export async function handlePlotClick(gx, gy) {
 
 }
 
+//Realtime: 
+
+export function setupGhostRealtime() {
+    supabase.channel('ghost-plots-channel')
+    .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'plots_request' },
+        (payload) => {
+            const req = payload.new;
+            rysujDucha(req.x, req.y);
+        }
+    )
+    .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'plots_request' },
+        (payload) => {
+            const req = payload.old;
+            const selector = `.ghost-plot[data-x="${req.x}"][data-y="${req.y}"]`;
+            const el = document.querySelector(selector);
+            if (el) el.remove(); // -> duch znika od razu
+        }
+    )
+    .subscribe();
+}
