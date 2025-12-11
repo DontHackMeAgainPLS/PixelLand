@@ -5,19 +5,31 @@ export const world = document.getElementById('game-world');
 const coordsDisplay = document.getElementById('coords');
 export const cursor = document.getElementById('cursor');
 
-export let camera = { x: -2500, y: -2500, zoom: 1 }; 
+export let camera = { x: -2500, y: -2500, zoom: 1 };
 export let isDragging = false;
 let startMouse = { x: 0, y: 0 };
-
 let startCamera = { x: 0, y: 0 };
 
+// Dynamiczna siatka: linia ma grubość 1/camera.zoom px w przestrzeni świata,
+// co po transformacji scale daje ~1px na ekranie.
+function updateGridAppearance() {
+    const gridSize = 50;                 // rozmiar kratki w przestrzeni świata
+    const lineThickness = 1 / camera.zoom; // grubość linii w przestrzeni świata
+
+    world.style.backgroundImage = `
+    linear-gradient(to right, #333 ${lineThickness}px, transparent ${lineThickness}px),
+    linear-gradient(to bottom, #333 ${lineThickness}px, transparent ${lineThickness}px)
+  `;
+    world.style.backgroundSize = `${gridSize}px ${gridSize}px`;
+}
 
 export function updateView() {
     world.style.transform = `
     translate(${camera.x}px, ${camera.y}px)
     scale(${camera.zoom})`;
+    world.style.transformOrigin = '0 0';
 
-    world.style.transformOrigin = '0 0'; 
+    updateGridAppearance();
 }
 
 export function setupMapInteractions() {
@@ -35,9 +47,8 @@ export function setupMapInteractions() {
     });
 
     document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+        e.preventDefault();
     });
-
 
     document.addEventListener('mouseup', (e) => {
         if (e.button !== 2) return;
@@ -48,70 +59,64 @@ export function setupMapInteractions() {
     document.addEventListener('mousemove', (e) => {
         // A. Logika przesuwania mapy
         if (isDragging) {
-  
-            // delta w pikselach na ekranie
             const dx = e.clientX - startMouse.x;
             const dy = e.clientY - startMouse.y;
 
-
-            // przeliczamy na świat uwzględniając zoom
             camera.x = startCamera.x + dx / camera.zoom;
             camera.y = startCamera.y + dy / camera.zoom;
 
-
             updateView();
         }
-        
 
         // B. Logika Celownika (Snapping)
         cursor.style.display = 'block';
-        const worldX = (e.clientX - camera.x) / camera.zoom;
-        const worldY = (e.clientY - camera.y) / camera.zoom;
 
-        // Matematyka: zaokrąglanie do 50
-        const gridX = Math.floor(worldX / 50) * 50;
-        const gridY = Math.floor(worldY / 50) * 50;
+        const rect = world.getBoundingClientRect();
+        const localX = e.clientX - rect.left;
+        const localY = e.clientY - rect.top;
+
+        let worldX = localX / camera.zoom;
+        let worldY = localY / camera.zoom;
+
+        // Precyzyjne dopasowanie do siatki 50px
+        let gridX = Math.round(worldX / 50) * 50;
+        let gridY = Math.round(worldY / 50) * 50;
+
+        // Twarde granice: 0..4950
+        const min = 0;
+        const max = 5000 - 50;
+        gridX = Math.max(min, Math.min(max, gridX));
+        gridY = Math.max(min, Math.min(max, gridY));
 
         cursor.style.left = gridX + 'px';
         cursor.style.top = gridY + 'px';
         cursor.dataset.gx = gridX;
         cursor.dataset.gy = gridY;
 
-        // Zapiszmy aktualne koordynaty do zmiennej globalnej
-        cursor.dataset.gx = gridX;
-        cursor.dataset.gy = gridY;
-
         coordsDisplay.innerText = `X: ${gridX / 50}, Y: ${gridY / 50}`;
     });
- 
+
     document.addEventListener('wheel', (e) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    const zoomStep = 0.1;
-    const minZoom = 0.5;
-    const maxZoom = 2;
+        const zoomStep = 0.1;
+        const minZoom = 0.5;
+        const maxZoom = 2;
 
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
+        const rect = world.getBoundingClientRect();
+        const localX = e.clientX - rect.left;
+        const localY = e.clientY - rect.top;
 
-    // współrzędne świata pod kursorem
-    const worldX = (mouseX - camera.x) / camera.zoom;
-    const worldY = (mouseY - camera.y) / camera.zoom;
+        const worldX = localX / camera.zoom;
+        const worldY = localY / camera.zoom;
 
-    // Ustal nowy zoom
-    let newZoom = camera.zoom + (e.deltaY < 0 ? zoomStep : -zoomStep);
-    newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom));
+        let newZoom = camera.zoom + (e.deltaY < 0 ? zoomStep : -zoomStep);
+        newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom));
 
-    // przesuwamy mapę, żeby punkt pod kursorem pozostał w tym samym miejscu
-    camera.x = mouseX - worldX * newZoom;
-    camera.y = mouseY - worldY * newZoom;
+        camera.x = localX - worldX * newZoom;
+        camera.y = localY - worldY * newZoom;
 
-    // Obliczamy, żeby zoom był wokół kursora
-    const rect = world.getBoundingClientRect();
-    const cursorX = e.clientX - rect.left;
-    const cursorY = e.clientY - rect.top;
-
-    camera.zoom = newZoom;
-    updateView();
-}, {passive: false});
+        camera.zoom = newZoom;
+        updateView();
+    }, { passive: false });
 }
