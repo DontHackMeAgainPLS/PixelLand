@@ -13,8 +13,8 @@ let startCamera = { x: 0, y: 0 };
 // Dynamiczna siatka: linia ma grubość 1/camera.zoom px w przestrzeni świata,
 // co po transformacji scale daje ~1px na ekranie.
 function updateGridAppearance() {
-    const gridSize = 50;                 // rozmiar kratki w przestrzeni świata
-    const lineThickness = 1 / camera.zoom; // grubość linii w przestrzeni świata
+    const gridSize = 50;
+    const lineThickness = 1 / camera.zoom;
 
     world.style.backgroundImage = `
     linear-gradient(to right, #333 ${lineThickness}px, transparent ${lineThickness}px),
@@ -23,7 +23,22 @@ function updateGridAppearance() {
     world.style.backgroundSize = `${gridSize}px ${gridSize}px`;
 }
 
+// Opcjonalny clamp kamery, żeby przy ekstremalnym zoomie nie wyjeżdżać daleko poza świat
+function clampCamera() {
+    const worldW = 5000;
+    const worldH = 5000;
+    const minX = -worldW * 0.9;
+    const minY = -worldH * 0.9;
+    const maxX = worldW * 0.9;
+    const maxY = worldH * 0.9;
+
+    camera.x = Math.max(minX, Math.min(maxX, camera.x));
+    camera.y = Math.max(minY, Math.min(maxY, camera.y));
+}
+
 export function updateView() {
+    clampCamera();
+
     world.style.transform = `
     translate(${camera.x}px, ${camera.y}px)
     scale(${camera.zoom})`;
@@ -71,12 +86,10 @@ export function setupMapInteractions() {
         // B. Logika Celownika (Snapping)
         cursor.style.display = 'block';
 
-        const rect = world.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
-
-        let worldX = localX / camera.zoom;
-        let worldY = localY / camera.zoom;
+        // Współrzędne świata względem aktualnego transformu,
+        // liczone bez rect — używamy pozycji myszy i kamery.
+        const worldX = (e.clientX - camera.x) / camera.zoom;
+        const worldY = (e.clientY - camera.y) / camera.zoom;
 
         // Precyzyjne dopasowanie do siatki 50px
         let gridX = Math.round(worldX / 50) * 50;
@@ -96,6 +109,7 @@ export function setupMapInteractions() {
         coordsDisplay.innerText = `X: ${gridX / 50}, Y: ${gridY / 50}`;
     });
 
+    // --- 4. ZOOM ZAWSZE WOKÓŁ KURSORA ---
     document.addEventListener('wheel', (e) => {
         e.preventDefault();
 
@@ -103,18 +117,21 @@ export function setupMapInteractions() {
         const minZoom = 0.5;
         const maxZoom = 2;
 
-        const rect = world.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
+        // Pozycja myszy w oknie
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
 
-        const worldX = localX / camera.zoom;
-        const worldY = localY / camera.zoom;
+        // Światowe współrzędne pod kursorem przed zmianą zoomu
+        const worldX = (mouseX - camera.x) / camera.zoom;
+        const worldY = (mouseY - camera.y) / camera.zoom;
 
+        // Nowy zoom
         let newZoom = camera.zoom + (e.deltaY < 0 ? zoomStep : -zoomStep);
         newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom));
 
-        camera.x = localX - worldX * newZoom;
-        camera.y = localY - worldY * newZoom;
+        // Przesuń kamerę tak, aby punkt świata pod kursorem pozostał pod kursorem ekranu
+        camera.x = mouseX - worldX * newZoom;
+        camera.y = mouseY - worldY * newZoom;
 
         camera.zoom = newZoom;
         updateView();
