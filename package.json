@@ -15,6 +15,7 @@
     "vite": "npm:rolldown-vite@7.2.5"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.86.2"
+    "@supabase/supabase-js": "^2.86.2",
+    "express": "^5.2.1"
   }
 }
