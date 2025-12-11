@@ -9,21 +9,21 @@ import { openEditor } from './editor-ui.js';
  * Wymaga dostępu do aktualnej sesji (currentUser).
  * @returns {Promise<boolean>}
  */
-export async function checkIsAdmin() { 
+export async function checkIsAdmin() {
     if (!currentUser) return false;
 
     const { data, error } = await supabase
         .from('admins')
-        .select('user_id') 
-        .eq('user_id', currentUser.user.id) 
-        .single(); 
+        .select('user_id')
+        .eq('user_id', currentUser.user.id)
+        .single();
 
-    if (error && error.code !== 'PGRST116') { 
+    if (error && error.code !== 'PGRST116') {
         console.error("Błąd zapytania isAdmin:", error);
         return false;
     }
 
-    return !!data; 
+    return !!data;
 }
 
 // Funkcja do pobierania zajętych działek i ich rysowania
@@ -57,16 +57,16 @@ export async function wczytajDzialki() {
                 img.src = dzialka.image_url;
                 // img.draggable = false; // Dobra praktyka: żeby nie przeciągać obrazka myszką
                 plot.appendChild(img);
-                
+
                 // Opcjonalnie: kolor tła jako backup, gdyby zdjęcie się nie załadowało
                 plot.style.backgroundColor = dzialka.color || '#333';
             } else {
                 // Stare zachowanie - tylko kolor
                 plot.style.backgroundColor = dzialka.color;
             }
-            
+
             //G na dole
-            plot.style.border = '2px solid #fff'; 
+            plot.style.border = '2px solid #fff';
             plot.dataset.owner = dzialka.owner_id;
 
             //TU ODŚWIEŻANIE
@@ -94,11 +94,11 @@ function rysujDucha(x, y) {
     ghost.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; // Przezroczyste tło
     ghost.style.border = '2px dashed #ffff00'; // Żółta przerywana linia (🚧)
     ghost.style.pointerEvents = 'none'; // Żeby myszka klikała "przez" niego w podłogę
-    
+
     // Zapisujemy koordynaty w HTML, żeby łatwo je znaleźć
     ghost.dataset.x = x;
     ghost.dataset.y = y;
-    
+
     // Dodajemy ikonkę (opcjonalne)
     ghost.innerText = "⏳";
     ghost.style.display = "flex";
@@ -123,7 +123,7 @@ export async function wczytajMojeRequesty() {
         query = query.eq('user_id', currentUser.user.id);
     }
 
-    const {data, error} = await query;
+    const { data, error } = await query;
     //const { data, error } = await supabase
     //    .from('plots_request') // Pamiętaj: małe litery nazwy tabeli
     //    .select('x, y') // Pobieramy tylko X i Y, reszta nas nie obchodzi do rysowania
@@ -150,9 +150,17 @@ export async function wczytajMojeRequesty() {
  */
 export async function handlePlotClick(gx, gy) {
     // 2. OCHRONA SESJI (Powtórzona dla pewności, choć main.js też to sprawdza)
-    if (!currentUser) return; 
-    
-    const ownerId = currentUser.user.id; 
+    if (!currentUser) return;
+
+    // Twarda granica: 0..4950
+    const min = 0;
+    const max = 5000 - 50;
+    if (gx < min || gy < min || gx > max || gy > max) {
+        alert('Poza granicą świata. Tu nie można stawiać.');
+        return;
+    }
+
+    const ownerId = currentUser.user.id;
 
     console.log(`Próba interakcji z działką: (${gx}, ${gy})`);
 
@@ -162,21 +170,21 @@ export async function handlePlotClick(gx, gy) {
         .select('*')
         .eq('x', gx)
         .eq('y', gy)
-        .maybeSingle(); 
+        .maybeSingle();
 
     if (selectError && selectError.code !== 'PGRST116') {
         console.error('Błąd zapytania SELECT:', selectError);
         alert('Błąd! Sprawdź konsolę.');
         return;
     }
-    
+
     // --- B. LOGIKA: WOLNA DZIAŁKA vs ZAJĘTA DZIAŁKA ---
     if (!existingPlot) {
         // 1. DZIAŁKA JEST WOLNA
         console.log('Działka jest wolna. Sprawdzam uprawnienia...');
-        
+
         const userIsAdmin = await checkIsAdmin();
-        
+
         if (userIsAdmin) {
             // Admin zajmuje wolną działkę (INSERT)
             const { error: insertError } = await supabase
@@ -190,62 +198,62 @@ export async function handlePlotClick(gx, gy) {
                 console.log('Sukces zajęcia działki!');
             }
         } else {
-            
+
             // --- LOGIKA WOLNEJ DZIAŁKI (Tworzenie prośby) ---
 
-    // 3. Sprawdzamy LIMIT (Max 4 prośby na gracza)
-    const { count, error: countError } = await supabase
-        .from('plots_request')
-        .select('*', { count: 'exact', head: true }) // head: true = nie pobieraj danych, tylko policz
-        .eq('user_id', currentUser.user.id);
+            // 3. Sprawdzamy LIMIT (Max 4 prośby na gracza)
+            const { count, error: countError } = await supabase
+                .from('plots_request')
+                .select('*', { count: 'exact', head: true }) // head: true = nie pobieraj danych, tylko policz
+                .eq('user_id', currentUser.user.id);
 
-    if (count >= 4) {
-        alert("Masz już 4 aktywne prośby! Poczekaj na Admina.");
-        return;
-    }
-
-    // 4. Przygotowanie danych (Wyciągamy NICK z metadanych)
-    // Jak nicku nie ma (stare konto), dajemy fallback "Gracz"
-    const myNick = currentUser.user.user_metadata?.username || 'Gracz';
-
-    // 5. WYSYŁKA DO BAZY
-    const { error: insertError } = await supabase
-        .from('plots_request')
-        .insert([
-            { 
-                x: gx, 
-                y: gy, 
-                user_id: currentUser.user.id,
-                username: myNick 
+            if (count >= 4) {
+                alert("Masz już 4 aktywne prośby! Poczekaj na Admina.");
+                return;
             }
-        ]);
 
-    // 6. Obsługa wyników
-    if (insertError) {
-        // Kod 23505 to błąd unikalności (Unique Constraint) w Postgresie
-        if (insertError.code === '23505') {
-            alert("Już zgłosiłeś chęć na tę działkę!");
-        } else {
-            console.error("Błąd zapisu:", insertError);
-            alert("Błąd systemu.");
+            // 4. Przygotowanie danych (Wyciągamy NICK z metadanych)
+            // Jak nicku nie ma (stare konto), dajemy fallback "Gracz"
+            const myNick = currentUser.user.user_metadata?.username || 'Gracz';
+
+            // 5. WYSYŁKA DO BAZY
+            const { error: insertError } = await supabase
+                .from('plots_request')
+                .insert([
+                    {
+                        x: gx,
+                        y: gy,
+                        user_id: currentUser.user.id,
+                        username: myNick
+                    }
+                ]);
+
+            // 6. Obsługa wyników
+            if (insertError) {
+                // Kod 23505 to błąd unikalności (Unique Constraint) w Postgresie
+                if (insertError.code === '23505') {
+                    alert("Już zgłosiłeś chęć na tę działkę!");
+                } else {
+                    console.error("Błąd zapisu:", insertError);
+                    alert("Błąd systemu.");
+                }
+            } else {
+                // SUKCES!
+                console.log("Request wysłany!");
+                rysujDucha(gx, gy); // Natychmiastowy feedback wizualny
+            }
+
         }
-    } else {
-        // SUKCES!
-        console.log("Request wysłany!");
-        rysujDucha(gx, gy); // Natychmiastowy feedback wizualny
-    }
-
-    }
     } else {
         // 2. DZIAŁKA JEST ZAJĘTA
         console.log(`Działka zajęta przez: ${existingPlot.owner_id}.`);
-        
+
         if (existingPlot.owner_id === ownerId) {
-            alert(`To Twoja działka (${gx/50}, ${gy/50})! Otwieram edytor Piaskownicy.`);
+            alert(`To Twoja działka (${gx / 50}, ${gy / 50})! Otwieram edytor Piaskownicy.`);
             openEditor(existingPlot, true);
         } else {
             const userIsAdmin = await checkIsAdmin();
-            
+
             if (userIsAdmin) {
                 alert(`Jesteś Adminem. Działka należy do ${existingPlot.owner_id}. Możesz edytować.`);
                 openEditor(existingPlot, true);
@@ -260,26 +268,25 @@ export async function handlePlotClick(gx, gy) {
 }
 
 //Realtime: 
-
 export function setupGhostRealtime() {
     supabase.channel('ghost-plots-channel')
-    .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'plots_request' },
-        (payload) => {
-            const req = payload.new;
-            rysujDucha(req.x, req.y);
-        }
-    )
-    .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'plots_request' },
-        (payload) => {
-            const req = payload.old;
-            const selector = `.ghost-plot[data-x="${req.x}"][data-y="${req.y}"]`;
-            const el = document.querySelector(selector);
-            if (el) el.remove(); // -> duch znika od razu
-        }
-    )
-    .subscribe();
+        .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'plots_request' },
+            (payload) => {
+                const req = payload.new;
+                rysujDucha(req.x, req.y);
+            }
+        )
+        .on(
+            'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'plots_request' },
+            (payload) => {
+                const req = payload.old;
+                const selector = `.ghost-plot[data-x="${req.x}"][data-y="${req.y}"]`;
+                const el = document.querySelector(selector);
+                if (el) el.remove(); // -> duch znika od razu
+            }
+        )
+        .subscribe();
 }
